@@ -1,74 +1,70 @@
-import { PieChart, Pie, Cell } from "recharts";
-
-const data = [
-  { name: "Mean survival time", value: 400 },
-  { name: "Mean follow-up time", value: 300 },
-  { name: "Maximum survival time", value: 300 },
-];
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28"];
-
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  percent,
-}) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="white"
-      textAnchor={x > cx ? "start" : "end"}
-      dominantBaseline="central"
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
+import axios from "axios";
+import { useEffect } from "react";
+import { useState } from "react";
+import Plot from "react-plotly.js";
+import { useSelector } from "react-redux";
 
 function PieComponent() {
+  const [data, setData] = useState(null);
+  const { user } = useSelector((state) => state.user);
+  const [chartSize, setChartSize] = useState({ width: 1000, height: 500 });
+  const userId = user.isAssistant ? user.doctorId : user._id;
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < 768) {
+        setChartSize({ width: 300, height: 400 });
+      } else {
+        setChartSize({ width: 500, height: 600 });
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+  console.log(user._id);
+  useEffect(() => {
+    axios
+      .get(
+        "http://localhost:3000/api/patient/follow-up-statistics",
+
+        {
+          params: { userId: userId },
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      )
+      .then((response) => {
+        setData(response.data), console.log(data);
+      })
+      .catch((error) =>
+        console.error("Error fetching follow-up statistics", error)
+      );
+  }, []);
+  const chartData = {
+    labels: ["Flow Up <= 1 year", "Flow Up > 1 year"],
+    values: [data?.followUpWithinYear, data?.followUpAfterYear],
+    type: "pie",
+    textinfo: "label+percent",
+    marker: {
+      colors: ["#FF6384", "#36A2EB"],
+    },
+  };
   return (
     <div>
-      <PieChart width={400} height={400}>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          label={renderCustomizedLabel}
-          outerRadius={150}
-          fill="#8884d8"
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-      </PieChart>
-      <div className="grid grid-cols-3">
-        {data.map((item, index) => (
-          <p key={index} className="cursor-pointer font-bold">
-            {item.name}
-          </p>
-        ))}
-      </div>
-      <div className="grid grid-cols-3 mt-[15px] mb-[15px]">
-        {COLORS.map((item, index) => (
-          <div
-            key={index}
-            className="h-[30px] w-[30px] rounded-full"
-            style={{ backgroundColor: item }}
-          ></div>
-        ))}
-      </div>
+      <Plot
+        data={[chartData]}
+        layout={{
+          width: chartSize.width,
+          height: chartSize.height,
+          title: "Distribution of Patient Follow-up",
+          showlegend: true,
+        }}
+      />
     </div>
   );
 }

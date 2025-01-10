@@ -1,13 +1,16 @@
 import { HiMenuAlt3 } from "react-icons/hi";
-import { menus } from "./../../assets/data/menus";
+import { doctormenus, Residentmenus } from "./../../assets/data/menus";
 import { Link, useLocation } from "react-router-dom";
 import React, { useState } from "react";
 import logo from "../../assets/images/map.png";
+import { useSelector } from "react-redux";
 
 function SideBar() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false); // Initialiser à false pour fermer la sidebar par défaut
   const [activeMenu, setActiveMenu] = useState(null);
   const location = useLocation();
+
+  const { user } = useSelector((state) => state.user);
 
   const handleMenuClick = (index) => {
     setActiveMenu(index);
@@ -16,6 +19,8 @@ function SideBar() {
     }
     setOpen(!open);
   };
+
+  const menus = user && user.isAssistant === true ? Residentmenus : doctormenus;
 
   return (
     <>
@@ -32,28 +37,24 @@ function SideBar() {
               onClick={() => setOpen(!open)}
             />
           </div>
-          <div className="flex items-center mb-8">
-            <img
-              src={logo}
-              alt="Tunisie Logo"
-              className="w-10 h-10 text-white"
-            />
+          <div className="flex items-center mb-5">
+            <img src={logo} alt=" Logo" className="w-10 h-10 text-white" />
             <h1
               className={`ml-2 text-2xl font-bold ${
                 !open && "opacity-0 translate-x-28 overflow-hidden"
               }`}
               style={{ transitionDelay: "200ms" }}
             >
-              EMRS 🏥
+              EMRS
             </h1>
           </div>
-          <ul className="mt-4 flex flex-col gap-4 relative">
+          <ul className="mt-3 flex flex-col gap-4 relative">
             {menus.map((menu, i) => (
               <li key={i} onClick={() => handleMenuClick(i)}>
                 <Link
                   to={menu.link}
                   className={`${
-                    menu.margin && "mt-5"
+                    menu.margin && "mt-3"
                   } group flex items-center text-l gap-3.5 font-medium p-2 ${
                     location.pathname === menu.link && activeMenu === i
                       ? "bg-gray-400 rounded-md"

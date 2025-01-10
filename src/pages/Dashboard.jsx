@@ -1,295 +1,348 @@
-import Lyout from "../components/lyout/Lyout";
-import { FaRegCalendarMinus } from "react-icons/fa";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import { Flex, Progress } from "antd";
-import PieComponent from "../components/PieComponent/PieComponent";
 import { useState, useEffect } from "react";
-const data = [
-  {
-    name: "Page A",
-    uv: 4000,
-    pv: 2400,
-    amt: 2400,
-  },
-  {
-    name: "Page B",
-    uv: 3000,
-    pv: 1398,
-    amt: 2210,
-  },
-  {
-    name: "Page C",
-    uv: 2000,
-    pv: 9800,
-    amt: 2290,
-  },
-  {
-    name: "Page D",
-    uv: 2780,
-    pv: 3908,
-    amt: 2000,
-  },
-  {
-    name: "Page E",
-    uv: 1890,
-    pv: 4800,
-    amt: 2181,
-  },
-  {
-    name: "Page F",
-    uv: 2390,
-    pv: 3800,
-    amt: 2500,
-  },
-  {
-    name: "Page G",
-    uv: 3490,
-    pv: 4300,
-    amt: 2100,
-  },
-];
+import Plot from "react-plotly.js";
+import { FaRegCalendarMinus } from "react-icons/fa";
+import Lyout from "../components/lyout/Lyout";
+import PieComponent from "../components/PieComponent/PieComponent";
+//import { Progress, Flex } from "antd";
+import axios from "axios";
+import { useSelector } from "react-redux";
+import DoughnutComponent from "../components/PieComponent/DoughnutComponent";
+import BiomarkersChart from "../components/PieComponent/BiomarkersChart";
 
 function Dashboard() {
   const [chartSize, setChartSize] = useState({ width: 1000, height: 500 });
+  const [consultationType, setConsultationType] = useState("S1");
+  const [scores, setScores] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+
+  const [data, setData] = useState({ death: [], readmission: [] });
+  const { user } = useSelector((state) => state.user);
+  const userId = user?.isAssistant ? user?.doctorId : user?._id;
+
+  const getUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      console.log(token);
+      if (!token) {
+        throw new Error("No token found");
+      }
+
+      const res = await axios.post(
+        "http://localhost:3000/api/doctor/profile",
+        {},
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      );
+
+      console.log("User data:", res.data.data);
+    } catch (error) {
+      console.error("Error fetching user data:", error.message);
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      console.log(user._id);
+      if (!userId) {
+        return;
+      }
+      const response = await axios.get(
+        `http://localhost:3000/api/patient/${userId}/statistics`,
+        {
+          params: { userId: userId },
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      );
+      setStatistics(response.data);
+
+      console.log(statistics);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des statistiques:", error);
+    }
+  };
+  const fetchKaplanMeierData = async () => {
+    try {
+      if (!userId) {
+        return;
+      }
+      const response = await axios.post(
+        "http://localhost:3000/api/patient/kaplan-meier",
+        {},
+        {
+          params: { userId: userId },
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      );
+      setData(response.data);
+      console.log("Kaplan:", response.data);
+    } catch (error) {
+      console.error("Error fetching Kaplan-Meier data:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+    getUserData();
+    fetchKaplanMeierData();
+    fetchData();
+  }, []);
 
   useEffect(() => {
     function handleResize() {
       if (window.innerWidth < 768) {
-        setChartSize({ width: 500, height: 300 });
+        setChartSize({ width: 400, height: 400 });
       } else {
-        setChartSize({ width: 1000, height: 500 });
+        setChartSize({ width: 1200, height: 600 });
       }
     }
 
     window.addEventListener("resize", handleResize);
-
     handleResize();
 
     return () => {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  const deathPlotData = {
+    x: data.death.map((point) => point.time),
+    y: data.death.map((point) => point.atRisk),
+    type: "scatter",
+    mode: "lines",
+    step: "hv", // horizontal-vertical steps to create a stair-like curve
+    marker: { color: "red" },
+    name: "Death",
+  };
+
+  const readmissionPlotData = {
+    x: data.readmission.map((point) => point.time),
+    y: data.readmission.map((point) => point.atRisk),
+    type: "scatter",
+    mode: "lines",
+    step: "hv", // horizontal-vertical steps to create a stair-like curve
+    marker: { color: "blue" },
+    name: "Readmission",
+  };
+
+  const handleTypeChange = (event) => {
+    setConsultationType(event.target.value);
+  };
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+    fetch(`http://localhost:3000/api/provider/provider-scores/${userId}`, {
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Fetched data:", data);
+        if (Array.isArray(data)) {
+          setScores(data);
+        } else {
+          console.error("Data is not an array:", data);
+        }
+      })
+      .catch((error) => console.error("Error fetching data:", error));
+  }, []);
+
+  const dataProvider = {
+    labels: scores.map((score) => score.provider),
+    datasets: [
+      {
+        label: "Scores",
+        data: scores.map((score) => score.score),
+        backgroundColor: scores.map((score) =>
+          score.score > 0
+            ? "rgba(75, 192, 192, 0.6)"
+            : "rgba(255, 99, 132, 0.6)"
+        ),
+      },
+    ],
+  };
+
+  const chartData = [
+    {
+      type: "bar",
+      x: dataProvider.labels,
+      y: dataProvider.datasets[0].data,
+      marker: {
+        color: dataProvider.datasets[0].backgroundColor,
+      },
+    },
+  ];
+  if (!userId) {
+    return;
+  }
   return (
     <Lyout>
-      <div className="pt-[2px] px-[10px] bg-white ">
-        <div className="grid grid-cols-4 gap-[30px] mt-[25px] pb-[15px]">
-          <div className="h-[100px] rounded-[8px] bg-white border-l-[4px] border-[#4E73DF] flex items-center justify-between px-[30px] cursor-pointer hover:shadow-lg transform hover:scale-[103%] transition duration-300 ease-out ">
-            <div>
-              <h2 className="text-[#B589DF] text-[11px] leading-[17px] font-bold ">
-                Total Patients
-              </h2>
-              <h1 className="text-[20px] leading-[24px] font-bold text-[#5a5c69] mt-[5px]">
-                100
-              </h1>
-            </div>
-            <FaRegCalendarMinus />
-          </div>
-          <div className="h-[100px] rounded-[8px] bg-white border-l-[4px] border-[#4E73DF] flex items-center justify-between px-[30px] cursor-pointer hover:shadow-lg transform hover:scale-[103%] transition duration-300 ease-out ">
-            <div>
-              <h2 className="text-[#1cc88a] text-[11px] leading-[17px] font-bold ">
-                Deaths at 30 days
-              </h2>
-              <h1 className="text-[20px] leading-[24px] font-bold text-[#5a5c69] mt-[5px]">
-                2
-              </h1>
-            </div>
-            <FaRegCalendarMinus />
-          </div>
-          <div className="h-[100px] rounded-[8px] bg-white border-l-[4px] border-[#4E73DF] flex items-center justify-between px-[30px] cursor-pointer hover:shadow-lg transform hover:scale-[103%] transition duration-300 ease-out ">
-            <div>
-              <h2 className="text-[#1cc88a] text-[11px] leading-[17px] font-bold ">
-                Deaths at 90 days
-              </h2>
-              <h1 className="text-[20px] leading-[24px] font-bold text-[#5a5c69] mt-[5px]">
-                4
-              </h1>
-            </div>
-            <FaRegCalendarMinus />
-          </div>
-          <div className="h-[100px] rounded-[8px] bg-white border-l-[4px] border-[#4E73DF] flex items-center justify-between px-[30px] cursor-pointer hover:shadow-lg transform hover:scale-[103%] transition duration-300 ease-out ">
-            <div>
-              <h2 className="text-[#1cc88a] text-[11px] leading-[17px] font-bold ">
-                ICU/PD readmissions at 180 days
-              </h2>
-              <h1 className="text-[20px] leading-[24px] font-bold text-[#5a5c69] mt-[5px]">
-                3
-              </h1>
-            </div>
-            <FaRegCalendarMinus />
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row mt-[22px] w-full gap-[30px]">
-          <div className="flex-1 sm:basis-[70%] border bg-white shadow-md cursor-pointer rounded-[4px]">
-            <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
-              <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
-                Deaths indexed
-              </h2>
-            </div>
-            <div>
-              <LineChart
-                width={chartSize.width}
-                height={chartSize.height}
-                data={data}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
+      <>
+        {" "}
+        <section className="px-4 pt-2 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4 pb-4">
+            {/* Card components */}
+            {[
+              {
+                label: "Total Patients",
+                value: `${statistics?.totalPatients}`,
+                color: "#4E73DF",
+              },
+              {
+                label: "The longest-standing patient",
+                value: `${
+                  statistics?.longestStandingPatient
+                    ? new Date(
+                        statistics?.longestStandingPatient?.icuPdDischarge?.Autonomy?.DateOfDischarge
+                      ).toLocaleDateString()
+                    : "N/A"
+                }`,
+                color: "#9966FF",
+              },
+              {
+                label: "Deaths at 30 days",
+                value: `${statistics?.patientsDiedWithin30Days}`,
+                color: "#1cc88a",
+              },
+              {
+                label: "Deaths at 90 days",
+                value: `${statistics?.patientsDiedWithin90Days}`,
+                color: "#FF6384",
+              },
+              {
+                label: "ICU/PD readmissions at 180 days",
+                value: `${statistics?.patientsReadmittedWithin180Days}`,
+                color: "#FF9F40",
+              },
+            ].map((card, index) => (
+              <div
+                key={index}
+                className="h-[100px] rounded-[8px] bg-white border-l-[4px] border-[#4E73DF] flex items-center justify-between px-[30px] cursor-pointer hover:shadow-lg transform hover:scale-[103%] transition duration-300 ease-out"
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="pv"
-                  stroke="#8884d8"
-                  activeDot={{ r: 8 }}
+                <div>
+                  <h2
+                    className={`text-[11px] leading-[17px] font-bold`}
+                    style={{ color: card.color }}
+                  >
+                    {card.label}
+                  </h2>
+                  <h1 className="text-[20px] leading-[24px] font-bold text-[#5a5c69] mt-[5px]">
+                    {card.value}
+                  </h1>
+                </div>
+                <FaRegCalendarMinus />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid  gap-[30px] mt-[22px]">
+            <div className=" border bg-white shadow-md cursor-pointer rounded-[4px]">
+              <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
+                <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
+                  Kaplan-Meier for Death and Readmission
+                </h2>
+              </div>
+              <div className="grid" style={{ width: "100%", height: "auto" }}>
+                <Plot
+                  data={[deathPlotData, readmissionPlotData]}
+                  layout={{
+                    width: chartSize.width,
+                    height: chartSize.height,
+                    title: "Kaplan-Meier for Death and Readmission",
+                    xaxis: { title: "Dates of Consultations" },
+                    yaxis: { title: "Number of Patients" },
+                  }}
+                  style={{ width: "100%", height: "100%" }}
                 />
-                <Line type="monotone" dataKey="uv" stroke="#82ca9d" />
-              </LineChart>
-            </div>
-          </div>
-          <div className="flex-1 sm:basis-[30%] border bg-white shadow-md cursor-pointer rounded-[4px]">
-            <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
-              <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
-                Mean survival, follow-up time and Maximum survival time (months)
-              </h2>
-            </div>
-            <div className="pl-[30px]">
-              <PieComponent />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex mt-[22px]  gap-[30px] shadow-md cursor-pointer rounded-[4px]">
-          <div className="basis-[55%] border bg-white shadow-md cursor-pointer rounded-[4px]">
-            <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
-              <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
-                Provider : delays for requested docs
-              </h2>
-            </div>
-            <div className="px-[25px] py-[15px] space-y-[15px]">
-              <Flex gap="small" vertical>
-                <div>
-                  <h2>Provider 1</h2>
-                  <Progress
-                    percent={30}
-                    strokeColor="#0088FE"
-                    status="active"
-                  />
-                </div>
-                <div>
-                  <h2>Provider 2</h2>
-                  <Progress
-                    percent={50}
-                    strokeColor="#02EAF6"
-                    status="active"
-                  />
-                </div>
-                <div>
-                  <h2>Provider 3</h2>
-                  <Progress
-                    percent={70}
-                    strokeColor="#0A803C"
-                    status="active"
-                  />
-                </div>
-                <div>
-                  <h2>Provider 4</h2>
-                  <Progress
-                    percent={100}
-                    strokeColor="#66DC67"
-                    status="active"
-                  />
-                </div>
-                <div>
-                  <h2>Provider 5</h2>
-                  <Progress
-                    percent={50}
-                    strokeColor="#C2668A"
-                    status="active"
-                  />
-                </div>
-                <div>
-                  <h2>Provider 6</h2>
-                  <Progress
-                    percent={50}
-                    strokeColor="#C7DDBA"
-                    status="active"
-                  />
-                </div>
-                <div>
-                  <h2>Provider 7</h2>
-                  <Progress
-                    percent={50}
-                    strokeColor="#FC2869"
-                    status="active"
-                  />
-                </div>
-              </Flex>
-            </div>
-          </div>
-          <div className="basis-[45%]  border bg-white shadow-md cursor-pointer rounded-[4px]">
-            <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
-              <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
-                Family Satisfaction
-              </h2>
-            </div>
-            <div className=" space-y-[15px]">
-              <div className="flex flex-col sm:flex-row gap-small items-center text-center justify-between">
-                {/* Premier groupe de cercles de progression */}
-                <div className="flex flex-col px-[50px] ">
-                  <h2>Positive</h2>
-                  <Progress
-                    type="circle"
-                    className="mb-20  " // Espacement entre les cercles sur tous les affichages
-                    format={() => "😊"}
-                    percent={75}
-                    strokeColor="#06FF00"
-                  />
-                  <h2>Neutral</h2>
-                  <Progress
-                    type="circle"
-                    percent={70}
-                    format={() => "😐"}
-                    strokeColor="#FFE400"
-                  />
-                </div>
-
-                {/* Deuxième groupe de cercles de progression */}
-                <div className="flex flex-col px-[50px] py-14">
-                  <h2>Negative</h2>
-                  <Progress
-                    type="circle"
-                    className="mb-20" // Espacement entre les cercles sur tous les affichages
-                    format={() => "😢"}
-                    percent={100}
-                    strokeColor="#FF1700"
-                  />
-                  <h2>No emotion</h2>
-                  <Progress
-                    type="circle"
-                    percent={100}
-                    format={() => "😑"}
-                    strokeColor="#FF8E00"
-                  />
-                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+          <div className="grid lg:grid-cols-2 sm:grid-cols-1 md:grid-cols-1 gap-[30px] mt-[22px]">
+            {" "}
+            <div className="  border bg-white shadow-md cursor-pointer rounded-[4px]">
+              <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
+                <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
+                  Distribution of Patient Follow-up
+                </h2>
+              </div>
+              <div className="pl-[30px]">
+                <PieComponent />
+              </div>
+            </div>
+            <div className="  border bg-white shadow-md cursor-pointer rounded-[4px]">
+              <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
+                <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
+                  Chronic Diseases Distribution
+                </h2>
+              </div>
+              <div className="pl-[30px]">
+                {/**/} <DoughnutComponent />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-[30px] mt-[22px]">
+            <div className="  border bg-white shadow-md cursor-pointer rounded-[4px]">
+              <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
+                <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
+                  COPD Average Biomarkers
+                </h2>
+              </div>
+              <div className="pl-[30px]">
+                <label htmlFor="consultationType">Consultation Type:</label>
+                <select
+                  id="consultationType"
+                  value={consultationType}
+                  onChange={handleTypeChange}
+                  className="mt-2 p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="S1">S1</option>
+                  <option value="S2">S2</option>
+                  <option value="M1">M1</option>
+                </select>
+
+                <BiomarkersChart
+                  userId={userId}
+                  consultationType={consultationType}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="grid  gap-[30px] mt-[22px]">
+            <div className=" border bg-white shadow-md cursor-pointer rounded-[4px]">
+              <div className="bg-[#F8F9FC] py-[15px] px-[20px] border-b-[1px] border-[#EDEDED] mb-[20px]">
+                <h2 className="text-[#308def] text-[16px] leading-[19px] font-bold">
+                  Provider Scores
+                </h2>
+              </div>
+              <div className="grid" style={{ width: "100%", height: "auto" }}>
+                <Plot
+                  data={chartData}
+                  layout={{
+                    title: "Provider Scores",
+                    xaxis: { title: "Provider" },
+                    yaxis: { title: "Score" },
+                    paper_bgcolor: "#f8f9fa",
+                    plot_bgcolor: "#f8f9fa",
+                  }}
+                  style={{ width: "100%", height: "400px" }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      </>
     </Lyout>
   );
 }

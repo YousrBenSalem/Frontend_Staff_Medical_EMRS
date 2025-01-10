@@ -2,19 +2,13 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
-import { BrowserRouter } from "react-router-dom";
-
-import { AuthProvider } from "./contexts/AuthContext.jsx";
-import ContextWrapper from "./contexts/ContextWrapper.jsx";
+import { Provider } from "react-redux";
+import store from "./redux/store.js";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <AuthProvider>
+  <Provider store={store}>
     <React.StrictMode>
-      <BrowserRouter>
-        <ContextWrapper>
-          <App />
-        </ContextWrapper>
-      </BrowserRouter>
+      <App />
     </React.StrictMode>
-  </AuthProvider>
+  </Provider>
 );

@@ -2,7 +2,7 @@ import signinImg from "../assets/images/signin.svg";
 import { useState } from "react";
 import useLogin from "../hooks/useLogin";
 import { useNavigate } from "react-router-dom";
-
+import logo from "../assets/images/map.png";
 function Login() {
   const navigate = useNavigate();
   const { loginUser } = useLogin();
@@ -23,6 +23,18 @@ function Login() {
 
   return (
     <section className="px-5 xl:px-0 mx-auto">
+      <div className="flex items-center mb-5 justify-center ml-10">
+        <div>
+          <img src={logo} alt=" Logo" className="w-20 h-20 text-white" />
+        </div>
+        <div>
+          <h1 className={"ml-3 mt-0 text-6xl font-bold "}>EMRS</h1>
+          <h6 className={"ml-3 mt-0  font-semibold "}>
+            Electronic Medical Records System{" "}
+          </h6>
+        </div>
+      </div>
+
       <div className="max-w-[1170px] mx-auto ">
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Image Section */}
@@ -51,7 +63,7 @@ function Login() {
                   required
                 />
               </div>
-              <div className="mb-20 text-center">
+              <div className="mb-10 text-center">
                 <input
                   type="password"
                   placeholder="Enter Your Password"
@@ -62,7 +74,8 @@ function Login() {
                   required
                 />
               </div>
-              <div className="mt-7">
+
+              <div className="mt-14">
                 <button
                   type="submit"
                   className="w-full bg-primaryColor text-white text-[18px] leading-[30px] rounded-lg"
@@ -74,6 +87,10 @@ function Login() {
           </div>
         </div>
       </div>
+      {/* Footer Section */}
+      <footer className="text-center py-5">
+        <p className="text-gray-500 text-sm">Made with ❤️ by ISSATSO</p>
+      </footer>
     </section>
   );
 }

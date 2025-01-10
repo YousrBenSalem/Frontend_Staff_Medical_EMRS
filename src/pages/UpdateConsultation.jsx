@@ -1,10 +1,31 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+
 import Lyout from "../components/lyout/Lyout";
 import { useState } from "react";
-import { AiOutlineMinus, AiOutlinePlus } from "react-icons/ai";
+import { message } from "antd";
+import PatientFollowUpFindings from "../components/ConsultationComponents/PatientFollowUpFindings";
+import BasicMonitoringClinical from "../components/ConsultationComponents/BasicMonitoringClinical";
+/* import QualityOfLife from "../components/ConsultationComponents/QualityOfLife"; */
+import Tolerance from "../components/ConsultationComponents/Tolerance";
+import Biomarkers from "../components/ConsultationComponents/Biomarkers";
+import VentilatorySupport from "../components/ConsultationComponents/VentilatorySupport";
+import AdvancedMonitoring from "../components/ConsultationComponents/AdvancedMonitoring";
+import MedicationsAdherence from "../components/ConsultationComponents/MedicationsAdherence";
+import ManagementAdjustment from "../components/ConsultationComponents/ManagementAdjustment";
+import Ventilatory from "../components/ConsultationComponents/Ventilatory";
+import Pharmacological from "../components/ConsultationComponents/Pharmacological";
+import Physiologic from "../components/ConsultationComponents/Physiologic";
+import SumUp from "../components/ConsultationComponents/SumUp";
+import NextAppointment from "../components/ConsultationComponents/NextAppointment";
+import axios from "axios";
+import { useEffect } from "react";
 function UpdateConsultation() {
-  const navigate = useNavigate();
-  const { patientId } = useParams();
+  //  const navigate = useNavigate();
+  const { consultationId } = useParams();
+  console.log(consultationId);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [managementAdjustments, setManagementAdjustments] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isOpen1, setIsOpen1] = useState(false);
   const [isOpen2, setIsOpen2] = useState(false);
@@ -16,6 +37,159 @@ function UpdateConsultation() {
   const [isOpen8, setIsOpen8] = useState(false);
   const [isOpen9, setIsOpen9] = useState(false);
   const [isOpen10, setIsOpen10] = useState(false);
+  /*   const [isOpen11, setIsOpen11] = useState(false); */
+  const [isOpen12, setIsOpen12] = useState(false);
+  const [isOpen13, setIsOpen13] = useState(false);
+  const [consultation, setConsultation] = useState({});
+  const [patientName, setPatientName] = useState();
+
+  const [formValues, setFormValues] = useState({
+    // Patient Follow-Up Findings
+    doctorName: "",
+    showUpDate: null,
+    type: "",
+    showUp: "",
+    IfNoShow: "",
+    numberOfModerateExacerbationsSinceDischarge: 0,
+    numberOfSevereExacerbationsSinceDischarge: 0,
+    HospitalReadmissionSinceDischarge: 0,
+    DateOfHospitalReadmissionSinceDischarge: null,
+    Death: "",
+    dateOfDeath: null,
+    CauseOfDeath: "",
+    // Basic Monitoring Clinical
+    Encephalopathy: "",
+    Nycturia: "",
+    Lowerlimbsedema: "",
+    mMRC: "",
+    epworthInterpretation: "",
+    totalEpworthScore: 0,
+    // Quality of Life
+    // Tolerance
+    UnintentionalLeaks: false,
+    ConjunctivalIrritation: false,
+    Pain: false,
+    SkinLesions: false,
+    NasalObstruction: false,
+    MucosalDryness: false,
+    Rhinorrhea: false,
+    InappropriateAlarmSettings: false,
+    AbdominalDistention: false,
+    DisruptedSleep: false,
+    Claustrophobia: false,
+    AnxietyRelatedToInterface: false,
+    // Biomarkers
+    PH: 0,
+    pCO2: 0,
+    PO2: 0,
+    Hco3: 0,
+    SaO2: 0,
+    PFT: "",
+    FEV1: 0,
+    FVC: 0,
+    FEV1_FVCRatio: 0,
+    TLC: 0,
+    DLCO: 0,
+    Conclusion: "",
+    Severity: "",
+    GOLD: "",
+    SixMWT: 0,
+    // Medications Adherence
+    SmokeCessation: "",
+    Rehabilitation: "",
+    Physiotherapy: "",
+    Diuretics: "",
+    ReasonsOfNonAdherence: "",
+    GOLD1: "",
+    LABA: false,
+    LAMA: false,
+    SABA: false,
+    ICS: false,
+    SARSCoV2: false,
+    Spneumoniae: false,
+    Influenza: false,
+    // Ventilatory Support
+    Mode: "",
+    IPAP: 0,
+    EPAP: 0,
+    maximalPS: 0,
+    MinimalPS: 0,
+    TImax: 0,
+    TImin: 0,
+    FixedTI: 0,
+    InspiratoryRiseTime: 0,
+    RespiratoryBackupTime: 0,
+    SensitivityOfInspiratoryCycling: 0,
+    SensitivityOfExpiratoryCycling: 0,
+    RespiratoryFrequency: 0,
+    FallTime: 0,
+    TargetedVt: 0,
+    DailyUse: 0,
+    Leaks: 0,
+    AHI: 0,
+    Regularity: "",
+    Interruptions: "",
+    // Advanced Monitoring
+    PVAs: "",
+    PVAsTypes: "",
+    OSAS: 0,
+    CSAS: 0,
+    CS: 0,
+    HV: 0,
+    RespiratoryPolygraphy: "",
+    AH_IH: 0,
+    ODI_H: 0,
+    meanSpO2: 0,
+    SpO2: 0,
+    OHS: 0,
+    RespiratoryPolygraphyFile: null,
+    // Sum Up
+    sum_Up: "",
+    // Management Adjustment
+
+    Class1: "",
+    INN_DCI1: 0,
+    BrandName1: "",
+    CIDdosages1: 0,
+    Repetition1: 0,
+    Duration1: "",
+    Doctor: "",
+    Date: null,
+    StampPdfToPatient: null,
+    // Physiologic
+    QuittingSmokingProgram: "",
+    InterventionSmoking: "",
+    RehabilitationProgram: "",
+    InterventionRehabilitation: "",
+    Physiotherapy1: "",
+    InterventionPhysiotherapy: "",
+    // Pharmacological
+    PrescriptionAdjustment: "",
+    laba: false,
+    lama: false,
+    saba: false,
+    ics: false,
+    influenza: false,
+    SARSCoV21: false,
+    pneumococcus: false,
+    // Ventilatory
+    NIVwithdrawal: "",
+    NIVSuspensionTest: "",
+    PSSwitch: "",
+    IPAPModification: 0,
+    EPAPModification: 0,
+    otherModifications: "",
+    InterfaceChange: "",
+    // Next Appointment
+    TTE: false,
+    PulmonaryFunctionalTesting: false,
+    CNAMRenewalRequest: false,
+    ABG: false,
+    Polygraphy: false,
+    Downlowds: false,
+    others: "",
+    patientId: "",
+  });
   const toggleAccordion = () => {
     setIsOpen(!isOpen);
   };
@@ -49,2549 +223,859 @@ function UpdateConsultation() {
   const toggleAccordion10 = () => {
     setIsOpen10(!isOpen10);
   };
-  const handleSubmit = (event) => {
+  /*   const toggleAccordion11 = () => {
+    setIsOpen11(!isOpen11);
+  }; */
+  const toggleAccordion12 = () => {
+    setIsOpen12(!isOpen12);
+  };
+  const toggleAccordion13 = () => {
+    setIsOpen13(!isOpen13);
+  };
+  const handleChange = (event) => {
+    const { name, value, type, checked, files } = event.target;
+    setFormValues((prev) => ({
+      ...prev,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "file"
+          ? files.length > 0
+            ? files[0]
+            : prev[name]
+          : value,
+    }));
+  };
+  const handleAdditionalInputChange = (id, field, value) => {
+    setManagementAdjustments((prevValues) => {
+      const updatedValues = [...prevValues];
+      const index = updatedValues.findIndex((item) => item.id === id);
+
+      if (index > -1) {
+        updatedValues[index] = { ...updatedValues[index], [field]: value };
+      } else {
+        updatedValues.push({ id, [field]: value });
+      }
+
+      return updatedValues;
+    });
+  };
+  const fetchConsultation = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/api/Consultations/${consultationId}`,
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      );
+
+      if (response.data && response.data.data) {
+        setConsultation(response.data.data);
+        setFormValues({
+          // PatientFollowUpFindings
+          doctorName: response.data.data.PatientFollowUpFindings?.doctorName,
+          showUpDate: response.data.data.PatientFollowUpFindings?.showUpDate,
+          showUp: response.data.data.PatientFollowUpFindings?.showUp,
+          IfNoShow: response.data.data.PatientFollowUpFindings?.IfNoShow,
+          type: response.data.data.PatientFollowUpFindings?.Type,
+          numberOfModerateExacerbationsSinceDischarge:
+            response.data.data.PatientFollowUpFindings
+              ?.numberOfModerateExacerbationsSinceDischarge,
+          numberOfSevereExacerbationsSinceDischarge:
+            response.data.data.PatientFollowUpFindings
+              ?.numberOfSevereExacerbationsSinceDischarge,
+          HospitalReadmissionSinceDischarge:
+            response.data.data.PatientFollowUpFindings
+              ?.HospitalReadmissionSinceDischarge,
+          DateOfHospitalReadmissionSinceDischarge:
+            response.data.data.PatientFollowUpFindings
+              ?.DateOfHospitalReadmissionSinceDischarge,
+          Death: response.data.data.PatientFollowUpFindings?.Death,
+          dateOfDeath: response.data.data.PatientFollowUpFindings?.dateOfDeath,
+          CauseOfDeath:
+            response.data.data.PatientFollowUpFindings?.CauseOfDeath,
+          // Basic Monitoring Clinical
+          Encephalopathy:
+            response.data.data.BasicMonitoringClinical?.Encephalopathy,
+          Nycturia: response.data.data.BasicMonitoringClinical?.Nycturia,
+          Lowerlimbsedema:
+            response.data.data.BasicMonitoringClinical?.Lowerlimbsedema,
+          mMRC: response.data.data.BasicMonitoringClinical?.mMRC,
+          epworthInterpretation:
+            response.data.data.BasicMonitoringClinical?.EpworthScore
+              ?.epworthInterpretation,
+          totalEpworthScore:
+            response.data.data.BasicMonitoringClinical?.EpworthScore
+              ?.totalEpworthScore,
+          // Tolerance
+          UnintentionalLeaks:
+            response.data.data.Tolerance?.NIVSideEffects?.UnintentionalLeaks,
+          ConjunctivalIrritation:
+            response.data.data.Tolerance?.NIVSideEffects
+              ?.ConjunctivalIrritation,
+          Pain: response.data.data.Tolerance?.NIVSideEffects?.Pain,
+          SkinLesions:
+            response.data.data.Tolerance?.NIVSideEffects?.SkinLesions,
+          NasalObstruction:
+            response.data.data.Tolerance?.NIVSideEffects?.NasalObstruction,
+          MucosalDryness:
+            response.data.data.Tolerance?.NIVSideEffects?.MucosalDryness,
+          Rhinorrhea: response.data.data.Tolerance?.NIVSideEffects?.Rhinorrhea,
+          InappropriateAlarmSettings:
+            response.data.data.Tolerance?.NIVSideEffects
+              ?.InappropriateAlarmSettings,
+          AbdominalDistention:
+            response.data.data.Tolerance?.NIVSideEffects?.AbdominalDistention,
+          DisruptedSleep:
+            response.data.data.Tolerance?.NIVSideEffects?.DisruptedSleep,
+          Claustrophobia:
+            response.data.data.Tolerance?.NIVSideEffects?.Claustrophobia,
+          AnxietyRelatedToInterface:
+            response.data.data.Tolerance?.NIVSideEffects
+              ?.AnxietyRelatedToInterface,
+          // Biomarkers
+          PH: response.data.data.Biomarkers?.PH,
+          pCO2: response.data.data.Biomarkers?.pCO2,
+          PO2: response.data.data.Biomarkers?.PO2,
+          Hco3: response.data.data.Biomarkers?.Hco3,
+          SaO2: response.data.data.Biomarkers?.SaO2,
+          PFT: response.data.data.Biomarkers?.PFT,
+          FEV1: response.data.data.Biomarkers?.FEV1,
+          FVC: response.data.data.Biomarkers?.FVC,
+          FEV1_FVCRatio: response.data.data.Biomarkers?.FEV1_FVCRatio,
+          TLC: response.data.data.Biomarkers?.TLC,
+          DLCO: response.data.data.Biomarkers?.DLCO,
+          Conclusion: response.data.data.Biomarkers?.Conclusion,
+          Severity: response.data.data.Biomarkers?.Severity,
+          GOLD: response.data.data.Biomarkers?.GOLD,
+          SixMWT: response.data.data.Biomarkers?.SixMWT,
+          // Medications Adherence
+          SmokeCessation:
+            response.data.data.MedicationsAdherence?.SmokeCessation,
+          Rehabilitation:
+            response.data.data.MedicationsAdherence?.Rehabilitation,
+          Physiotherapy: response.data.data.MedicationsAdherence?.Physiotherapy,
+          Diuretics: response.data.data.MedicationsAdherence?.Diuretics,
+          ReasonsOfNonAdherence:
+            response.data.data.MedicationsAdherence?.ReasonsOfNonAdherence,
+          GOLD1: response.data.data.MedicationsAdherence?.GOLD,
+          LABA: response.data.data.MedicationsAdherence?.MedicationsAdherence
+            ?.LABA,
+          LAMA: response.data.data.MedicationsAdherence?.MedicationsAdherence
+            ?.LAMA,
+          SABA: response.data.data.MedicationsAdherence?.MedicationsAdherence
+            ?.SABA,
+          ICS: response.data.data.MedicationsAdherence?.MedicationsAdherence
+            ?.ICS,
+          SARSCoV2:
+            response.data.data.MedicationsAdherence?.Vaccinations?.SARSCoV2,
+          Spneumoniae:
+            response.data.data.MedicationsAdherence?.Vaccinations?.Spneumoniae,
+          Influenza:
+            response.data.data.MedicationsAdherence?.Vaccinations?.Influenza,
+          // Ventilatory Support
+          Mode: response.data.data.VentilatorySupport?.Mode,
+          IPAP: response.data.data.VentilatorySupport?.IPAP,
+          EPAP: response.data.data.VentilatorySupport?.EPAP,
+          maximalPS: response.data.data.VentilatorySupport?.maximalPS,
+          MinimalPS: response.data.data.VentilatorySupport?.MinimalPS,
+          TImax: response.data.data.VentilatorySupport?.TImax,
+          TImin: response.data.data.VentilatorySupport?.TImin,
+          FixedTI: response.data.data.VentilatorySupport?.FixedTI,
+          InspiratoryRiseTime:
+            response.data.data.VentilatorySupport?.InspiratoryRiseTime,
+          RespiratoryBackupTime:
+            response.data.data.VentilatorySupport?.RespiratoryBackupTime,
+          SensitivityOfInspiratoryCycling:
+            response.data.data.VentilatorySupport
+              ?.SensitivityOfInspiratoryCycling,
+          SensitivityOfExpiratoryCycling:
+            response.data.data.VentilatorySupport
+              ?.SensitivityOfExpiratoryCycling,
+          RespiratoryFrequency:
+            response.data.data.VentilatorySupport?.RespiratoryFrequency,
+          FallTime: response.data.data.VentilatorySupport?.FallTime,
+          TargetedVt: response.data.data.VentilatorySupport?.TargetedVt,
+          DailyUse: response.data.data.VentilatorySupport?.DailyUse,
+          Leaks: response.data.data.VentilatorySupport?.Leaks,
+          AHI: response.data.data.VentilatorySupport?.AHI,
+          Regularity: response.data.data.VentilatorySupport?.Regularity,
+          Interruptions: response.data.data.VentilatorySupport?.Interruptions,
+          // Advanced Monitoring
+          PVAs: response.data.data.AdvancedMonitoring?.PVAs,
+          PVAsTypes: response.data.data.AdvancedMonitoring?.PVAsTypes,
+          OSAS: response.data.data.AdvancedMonitoring?.OSAS,
+          CSAS: response.data.data.AdvancedMonitoring?.CSAS,
+          CS: response.data.data.AdvancedMonitoring?.CS,
+          HV: response.data.data.AdvancedMonitoring?.HV,
+          RespiratoryPolygraphy:
+            response.data.data.AdvancedMonitoring?.RespiratoryPolygraphy,
+          AH_IH: response.data.data.AdvancedMonitoring?.AH_IH,
+          ODI_H: response.data.data.AdvancedMonitoring?.ODI_H,
+          meanSpO2: response.data.data.AdvancedMonitoring?.meanSpO2,
+          SpO2: response.data.data.AdvancedMonitoring?.SpO2,
+          OHS: response.data.data.AdvancedMonitoring?.OHS,
+          RespiratoryPolygraphyFile:
+            response.data.data.AdvancedMonitoring?.RespiratoryPolygraphyFile,
+          // Sum Up
+          sum_Up: response.data.data.sum_Up,
+          // Management Adjustment
+
+          Class1:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.Class,
+          INN_DCI1:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.INN_DCI,
+          BrandName1:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.BrandName,
+          CIDdosages1:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.CIDdosages,
+          Repetition1:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.Repetition,
+          Duration1:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.Duration,
+          Doctor:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.Doctor,
+          Date: response.data.data.ManagementAdjustment?.ManagementAdjustment
+            ?.Date,
+          StampPdfToPatient:
+            response.data.data.ManagementAdjustment?.ManagementAdjustment
+              ?.StampPdfToPatient,
+          // Physiologic
+          QuittingSmokingProgram:
+            response.data.data.Physiologic?.QuittingSmokingProgram,
+          InterventionSmoking:
+            response.data.data.Physiologic?.InterventionSmoking,
+          RehabilitationProgram:
+            response.data.data.Physiologic?.RehabilitationProgram,
+          InterventionRehabilitation:
+            response.data.data.Physiologic?.InterventionRehabilitation,
+          Physiotherapy1: response.data.data.Physiologic?.Physiotherapy,
+          InterventionPhysiotherapy:
+            response.data.data.Physiologic?.InterventionPhysiotherapy,
+          // Pharmacological
+          PrescriptionAdjustment:
+            response.data.data.Pharmacological?.PrescriptionAdjustment,
+          laba: response.data.data.Pharmacological?.DeNovoPrescription?.LABA,
+          lama: response.data.data.Pharmacological?.DeNovoPrescription?.LAMA,
+          saba: response.data.data.Pharmacological?.DeNovoPrescription?.SABA,
+          ics: response.data.data.Pharmacological?.DeNovoPrescription?.ICS,
+          influenza:
+            response.data.data.Pharmacological?.VaccinationPrescription
+              ?.influenza,
+          SARSCoV21:
+            response.data.data.Pharmacological?.VaccinationPrescription
+              ?.SARSCoV2,
+          pneumococcus:
+            response.data.data.Pharmacological?.VaccinationPrescription
+              ?.pneumococcus,
+          // Ventilatory
+          NIVwithdrawal: response.data.data.Ventilatory?.NIVwithdrawal,
+          NIVSuspensionTest: response.data.data.Ventilatory?.NIVSuspensionTest,
+          PSSwitch: response.data.data.Ventilatory?.PSSwitch,
+          IPAPModification: response.data.data.Ventilatory?.IPAPModification,
+          EPAPModification: response.data.data.Ventilatory?.EPAPModification,
+          otherModifications:
+            response.data.data.Ventilatory?.otherModifications,
+          InterfaceChange: response.data.data.Ventilatory?.InterfaceChange,
+          // Next Appointment
+          TTE: response.data.data.NextAppointment?.Needs?.TTE,
+          PulmonaryFunctionalTesting:
+            response.data.data.NextAppointment?.Needs
+              ?.PulmonaryFunctionalTesting,
+          CNAMRenewalRequest:
+            response.data.data.NextAppointment?.Needs?.CNAMRenewalRequest,
+          ABG: response.data.data.NextAppointment?.Biomarkers?.ABG,
+          Polygraphy:
+            response.data.data.NextAppointment?.Biomarkers?.Polygraphy,
+          Downlowds: response.data.data.NextAppointment?.Biomarkers?.Downloads,
+          others: response.data.data.NextAppointment?.others,
+          patientId: response.data.data.patientId,
+        });
+        console.log("get consultation by id", formValues);
+      } else {
+        setConsultation({});
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération du consultation:", error);
+    }
+  };
+  useEffect(() => {
+    fetchConsultation();
+  }, [consultationId]);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    navigate("/calender");
-    // Implémentez la logique pour envoyer les données du formulaire à votre API
-    console.log("Consultation ajoutée pour le patient ID:", patientId);
+    const formData = new FormData();
+    // Patient Follow-Up Findings
+    formData.append("doctorName", formValues.doctorName);
+    if (formValues.showUpDate) {
+      formData.append("showUpDate", formValues.showUpDate);
+    }
+    formData.append("type", formValues.type);
+    formData.append("showUp", formValues.showUp);
+    formData.append("IfNoShow", formValues.IfNoShow);
+    formData.append(
+      "numberOfModerateExacerbationsSinceDischarge",
+      formValues.numberOfModerateExacerbationsSinceDischarge
+    );
+    formData.append(
+      "numberOfSevereExacerbationsSinceDischarge",
+      formValues.numberOfSevereExacerbationsSinceDischarge
+    );
+    formData.append(
+      "HospitalReadmissionSinceDischarge",
+      formValues.HospitalReadmissionSinceDischarge
+    );
+    if (formValues.DateOfHospitalReadmissionSinceDischarge) {
+      formData.append(
+        "DateOfHospitalReadmissionSinceDischarge",
+        formValues.DateOfHospitalReadmissionSinceDischarge
+      );
+    }
+    formData.append("Death", formValues.Death);
+    if (formValues.dateOfDeath) {
+      formData.append("dateOfDeath", formValues.dateOfDeath);
+    }
+
+    formData.append("CauseOfDeath", formValues.CauseOfDeath);
+    // Basic Monitoring Clinical
+    formData.append("Encephalopathy", formValues.Encephalopathy);
+    formData.append("Nycturia", formValues.Nycturia);
+    formData.append("Lowerlimbsedema", formValues.Lowerlimbsedema);
+    formData.append("mMRC", formValues.mMRC);
+    formData.append("epworthInterpretation", formValues.epworthInterpretation);
+    formData.append("totalEpworthScore", formValues.totalEpworthScore);
+
+    // Tolerance
+    formData.append("UnintentionalLeaks", formValues.UnintentionalLeaks);
+    formData.append(
+      "ConjunctivalIrritation",
+      formValues.ConjunctivalIrritation
+    );
+    formData.append("Pain", formValues.Pain);
+    formData.append("SkinLesions", formValues.SkinLesions);
+    formData.append("NasalObstruction", formValues.NasalObstruction);
+    formData.append("MucosalDryness", formValues.MucosalDryness);
+    formData.append("Rhinorrhea", formValues.Rhinorrhea);
+    formData.append(
+      "InappropriateAlarmSettings",
+      formValues.InappropriateAlarmSettings
+    );
+    formData.append("AbdominalDistention", formValues.AbdominalDistention);
+    formData.append("DisruptedSleep", formValues.DisruptedSleep);
+    formData.append("Claustrophobia", formValues.Claustrophobia);
+    formData.append(
+      "AnxietyRelatedToInterface",
+      formValues.AnxietyRelatedToInterface
+    );
+    // Biomarkers
+    formData.append("PH", formValues.PH);
+    formData.append("pCO2", formValues.pCO2);
+    formData.append("PO2", formValues.PO2);
+    formData.append("Hco3", formValues.Hco3);
+    formData.append("SaO2", formValues.SaO2);
+    formData.append("PFT", formValues.PFT);
+    formData.append("FEV1", formValues.FEV1);
+    formData.append("FVC", formValues.FVC);
+    formData.append("FEV1_FVCRatio", formValues.FEV1_FVCRatio);
+    formData.append("TLC", formValues.TLC);
+    formData.append("DLCO", formValues.DLCO);
+    formData.append("Conclusion", formValues.Conclusion);
+    formData.append("Severity", formValues.Severity);
+    formData.append("GOLD", formValues.GOLD);
+    formData.append("SixMWT", formValues.SixMWT);
+    // Medications Adherence
+    formData.append("SmokeCessation", formValues.SmokeCessation);
+    formData.append("Rehabilitation", formValues.Rehabilitation);
+    formData.append("Physiotherapy", formValues.Physiotherapy);
+    formData.append("Diuretics", formValues.Diuretics);
+    formData.append("ReasonsOfNonAdherence", formValues.ReasonsOfNonAdherence);
+    formData.append("GOLD1", formValues.GOLD1);
+    formData.append("LABA", formValues.LABA);
+    formData.append("LAMA", formValues.LAMA);
+    formData.append("SABA", formValues.SABA);
+    formData.append("ICS", formValues.ICS);
+    formData.append("SARSCoV2", formValues.SARSCoV2);
+    formData.append("Spneumoniae", formValues.Spneumoniae);
+    formData.append("Influenza", formValues.Influenza);
+    // Ventilatory Supp
+    formData.append("Mode", formValues.Mode);
+    formData.append("IPAP", formValues.IPAP);
+    formData.append("EPAP", formValues.EPAP);
+    formData.append("maximalPS", formValues.maximalPS);
+    formData.append("MinimalPS", formValues.MinimalPS);
+    formData.append("TImax", formValues.TImax);
+    formData.append("TImin", formValues.TImin);
+    formData.append("FixedTI", formValues.FixedTI);
+    formData.append("InspiratoryRiseTime", formValues.InspiratoryRiseTime);
+    formData.append("RespiratoryBackupTime", formValues.RespiratoryBackupTime);
+    formData.append(
+      "SensitivityOfInspiratoryCycling",
+      formValues.SensitivityOfInspiratoryCycling
+    );
+
+    formData.append(
+      "SensitivityOfExpiratoryCycling",
+      formValues.SensitivityOfExpiratoryCycling
+    );
+    formData.append("RespiratoryFrequency", formValues.RespiratoryFrequency);
+    formData.append("FallTime", formValues.FallTime);
+    formData.append("TargetedVt", formValues.TargetedVt);
+    formData.append("DailyUse", formValues.DailyUse);
+    formData.append("Leaks", formValues.Leaks);
+    formData.append("AHI", formValues.AHI);
+    formData.append("Regularity", formValues.Regularity);
+    formData.append("Interruptions", formValues.Interruptions);
+    // Advanced Monitoring
+    formData.append("PVAs", formValues.PVAs);
+    formData.append("PVAsTypes", formValues.PVAsTypes);
+    formData.append("OSAS", formValues.OSAS);
+    formData.append("CSAS", formValues.CSAS);
+    formData.append("CS", formValues.CS);
+    formData.append("HV", formValues.HV);
+    formData.append("RespiratoryPolygraphy", formValues.RespiratoryPolygraphy);
+    formData.append("AH_IH", formValues.AH_IH);
+    formData.append("ODI_H", formValues.ODI_H);
+    formData.append("meanSpO2", formValues.meanSpO2);
+    formData.append("SpO2", formValues.SpO2);
+    formData.append("OHS", formValues.OHS);
+    if (formValues.RespiratoryPolygraphyFile) {
+      formData.append(
+        "RespiratoryPolygraphyFile",
+        formValues.RespiratoryPolygraphyFile
+      );
+    }
+
+    // Sum Up
+    formData.append("sum_Up", formValues.sum_Up);
+    // Management Adjustment
+    formData.append("Class1", formValues.Class1);
+    formData.append("INN_DCI1", formValues.INN_DCI1);
+    formData.append("BrandName1", formValues.BrandName1);
+    formData.append("CIDdosages1", formValues.CIDdosages1);
+    formData.append("Repetition1", formValues.Repetition1);
+    formData.append("Duration1", formValues.Duration1);
+    formData.append("Doctor", formValues.Doctor);
+    if (formValues.Date) {
+      formData.append("Date", formValues.Date);
+    }
+    if (formValues.StampPdfToPatient) {
+      formData.append("StampPdfToPatient", formValues.StampPdfToPatient);
+    }
+    // Physiologic
+    formData.append(
+      "QuittingSmokingProgram",
+      formValues.QuittingSmokingProgram
+    );
+    formData.append("InterventionSmoking", formValues.InterventionSmoking);
+    formData.append("RehabilitationProgram", formValues.RehabilitationProgram);
+    formData.append(
+      "InterventionRehabilitation",
+      formValues.InterventionRehabilitation
+    );
+    formData.append("Physiotherapy1", formValues.Physiotherapy1);
+    formData.append(
+      "InterventionPhysiotherapy",
+      formValues.InterventionPhysiotherapy
+    );
+    // Pharmacological
+    formData.append(
+      "PrescriptionAdjustment",
+      formValues.PrescriptionAdjustment
+    );
+    formData.append("laba", formValues.laba);
+    formData.append("lama", formValues.lama);
+    formData.append("saba", formValues.saba);
+    formData.append("ics", formValues.ics);
+    formData.append("influenza", formValues.influenza);
+    formData.append("SARSCoV21", formValues.SARSCoV21);
+    formData.append("pneumococcus", formValues.pneumococcus);
+    // Ventilatory
+    formData.append("NIVwithdrawal", formValues.NIVwithdrawal);
+    formData.append("NIVSuspensionTest", formValues.NIVSuspensionTest);
+    formData.append("PSSwitch", formValues.PSSwitch);
+    formData.append("IPAPModification", formValues.IPAPModification);
+    formData.append("EPAPModification", formValues.EPAPModification);
+    formData.append("otherModifications", formValues.otherModifications);
+    formData.append("InterfaceChange", formValues.InterfaceChange);
+    // Next Appointment
+    formData.append("TTE", formValues.TTE);
+    formData.append(
+      "PulmonaryFunctionalTesting",
+      formValues.PulmonaryFunctionalTesting
+    );
+    formData.append("CNAMRenewalRequest", formValues.CNAMRenewalRequest);
+    formData.append("ABG", formValues.ABG);
+    formData.append("Polygraphy", formValues.Polygraphy);
+    formData.append("Downlowds", formValues.Downlowds);
+    formData.append("others", formValues.others);
+    formData.append(
+      "ManagementAdjustmentAdded",
+      JSON.stringify(managementAdjustments)
+    );
+
+    console.log(managementAdjustments);
+    try {
+      const response = await axios.put(
+        `http://localhost:3000/api/Consultations/UpdateConsultation/${consultationId}`,
+        formData,
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        messageApi.open({
+          type: "success",
+          content: "consultation updated successfully",
+        });
+        //  navigate("/calenderAddAppointement/:patientId");
+      } else {
+        messageApi.open({
+          type: "error",
+          content: "Failed to update consultation",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      messageApi.open({
+        type: "error",
+        content: "An error occurred while updating the consultation.",
+      });
+    }
+  };
+  const patientId = formValues.patientId;
+  console.log(patientId);
+  const fetchPatientName = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/api/patient/patientName/${patientId}`,
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setPatientName(response.data.data);
+        console.log(patientName);
+      } else {
+        setPatientName();
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération du patient:", error);
+    }
+  };
+  useEffect(() => {
+    fetchPatientName();
+  }, [patientId]);
+  const generatePDF = async () => {
+    try {
+      // Charger le PDF existant depuis le dossier assets
+      const existingPdfBytes = await fetch(
+        "/ordonnance consultation post_icu.pdf"
+      ).then((res) => res.arrayBuffer());
+
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+
+      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const helveticaBoldFont = await pdfDoc.embedFont(
+        StandardFonts.HelveticaBold
+      );
+
+      firstPage.setFont(helveticaFont);
+      firstPage.setFontSize(10);
+      firstPage.drawText(
+        `Le: ${new Date(formValues.showUpDate).toLocaleDateString()}`,
+        { x: 450, y: 800 }
+      );
+      firstPage.drawText(`Nom & Prénom: ${patientName}`, { x: 230, y: 640 });
+      firstPage.setFont(helveticaBoldFont);
+      firstPage.setFontSize(10);
+      firstPage.drawText(`Physiologic : `, { x: 150, y: 600 });
+
+      firstPage.setFont(helveticaFont);
+      firstPage.drawText(
+        `Quitting Smoking Program: ${formValues.QuittingSmokingProgram}`,
+        { x: 150, y: 580 }
+      );
+      firstPage.drawText(
+        `Rehabilitation Program: ${formValues.RehabilitationProgram}`,
+        { x: 150, y: 560 }
+      );
+      firstPage.drawText(
+        `Intervention Rehabilitation: ${formValues.InterventionRehabilitation}`,
+        { x: 150, y: 540 }
+      );
+      firstPage.drawText(
+        `Physiotherapy Program: ${formValues.Physiotherapy1}`,
+        { x: 150, y: 520 }
+      );
+      firstPage.setFont(helveticaBoldFont);
+      firstPage.setFontSize(10);
+      firstPage.drawText(`Pharmacological : `, { x: 150, y: 480 });
+      firstPage.setFont(helveticaFont);
+
+      firstPage.drawText(
+        `Prescription Adjustment: ${formValues.PrescriptionAdjustment}`,
+        {
+          x: 150,
+          y: 460,
+        }
+      );
+      firstPage.drawText(`De novo prescription:`, {
+        x: 150,
+        y: 440,
+      });
+      firstPage.drawText(
+        `LABA: ${formValues.laba ? "Yes" : "No"} , LAMA: ${
+          formValues.lama ? "Yes" : "No"
+        }, SABA: ${formValues.saba ? "Yes" : "No"}, ICS: ${
+          formValues.ics ? "Yes" : "No"
+        }`,
+        {
+          x: 150,
+          y: 420,
+        }
+      );
+      firstPage.drawText(`Vaccination prescription : `, {
+        x: 150,
+        y: 400,
+      });
+      firstPage.drawText(
+        `Influenza: ${formValues.influenza ? "Yes" : "No"}, SARS-CoV-2: ${
+          formValues.SARSCoV21 ? "Yes" : "No"
+        }, Pneumococcus: ${formValues.pneumococcus ? "Yes" : "No"}`,
+        {
+          x: 150,
+          y: 380,
+        }
+      );
+      firstPage.setFont(helveticaBoldFont);
+      firstPage.setFontSize(10);
+      firstPage.drawText(`Ventilatory : `, { x: 150, y: 340 });
+      firstPage.setFont(helveticaFont);
+
+      firstPage.drawText(`NIV Withdrawal: ${formValues.NIVwithdrawal}`, {
+        x: 150,
+        y: 320,
+      });
+      firstPage.drawText(
+        `NIV Suspension Test: ${formValues.NIVSuspensionTest}`,
+        { x: 150, y: 300 }
+      );
+      firstPage.drawText(`PS Switch: ${formValues.PSSwitch}`, {
+        x: 150,
+        y: 280,
+      });
+      firstPage.drawText(`IPAP Modification: ${formValues.IPAPModification}`, {
+        x: 150,
+        y: 260,
+      });
+      firstPage.drawText(`EPAP Modification: ${formValues.EPAPModification}`, {
+        x: 150,
+        y: 240,
+      });
+      firstPage.drawText(
+        `Other Modifications: ${formValues.otherModifications}`,
+        {
+          x: 150,
+          y: 220,
+        }
+      );
+      firstPage.drawText(`Interface Change: ${formValues.InterfaceChange}`, {
+        x: 150,
+        y: 200,
+      });
+      firstPage.setFont(helveticaBoldFont);
+      firstPage.setFontSize(10);
+      firstPage.drawText(`Management adjustment : `, { x: 150, y: 160 });
+      firstPage.setFont(helveticaFont);
+
+      firstPage.drawText(
+        `${formValues.Class1}: ${formValues.INN_DCI1}, ${formValues.BrandName1}, ${formValues.CIDdosages1} * ${formValues.Repetition1}, ${formValues.Duration1}  `,
+        {
+          x: 150,
+          y: 140,
+        }
+      );
+      let yOffset = 120;
+      if (managementAdjustments.length > 0) {
+        // Boucler sur les éléments du tableau managementAdjustments
+        managementAdjustments.forEach((adjustment) => {
+          const text = `${adjustment.Class}: ${adjustment.INN_DCI}, ${adjustment.BrandName}, ${adjustment.CIDdosages} * ${adjustment.Repetition}, ${adjustment.Duration}`;
+
+          firstPage.drawText(text, { x: 150, y: yOffset });
+
+          yOffset -= 20; // Diminuer la position verticale pour la prochaine ligne
+        });
+      }
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Ordonnance_Medicale.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Erreur lors du téléchargement du PDF:", error);
+    }
   };
   return (
     <Lyout>
       <>
-        <form className=" mx-auto scroll" onSubmit={handleSubmit}>
+        {contextHolder}
+
+        <form
+          className="mx-auto scroll"
+          onSubmit={handleSubmit}
+          encType="multipart/form-data"
+        >
           {/*Section 1*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Patient follow-up findings
-              </h4>
-              <div
-                className={` ${
-                  isOpen && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="doctorName"
-                        id="doctorName"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="doctorName"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Doctor Name
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="date"
-                        name="showUpDate"
-                        id="showUpDate"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="showUpDate"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Date
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="showUp"
-                        id="showUp"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="noShow">No-show</option>
-                      </select>
-                      <label
-                        htmlFor="showUp"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Show Up
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="ifNoShowUp"
-                        id="ifNoShowUp"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="ifNoShowUp"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        If No-Show
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="numberOfModerateExacerbationsSinceDischarge"
-                        id="numberOfModerateExacerbationsSinceDischarge"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="numberOfModerateExacerbationsSinceDischarge"
-                        className="peer-focus:font-medium absolute text-xs text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] per-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Number Of Moderate Exacerbations Since Discharge
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="numberOfSevereExacerbationsSinceDischarge"
-                        id="numberOfSevereExacerbationsSinceDischarge"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="numberOfSevereExacerbationsSinceDischarge"
-                        className="peer-focus:font-medium absolute text-xs text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] per-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Number Of Severe Exacerbations Since Discharge
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="HospitalReadmissionSinceDischarge"
-                        id="HospitalReadmissionSinceDischarge"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="HospitalReadmissionSinceDischarge"
-                        className="peer-focus:font-medium absolute text-xs text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] per-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Hospital Readmission Since Discharge
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <PatientFollowUpFindings
+            consultation={consultation}
+            isOpen={isOpen}
+            toggleAccordion={toggleAccordion}
+            formValues={formValues}
+            setFormValues={setFormValues}
+            handleChange={handleChange}
+          />
           {/*Section 2*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion1}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Basic Monitoring clinical
-              </h4>
-              <div
-                className={` ${
-                  isOpen1 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen1 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen1 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Encephalopathy"
-                        id="Encephalopathy"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="Encephalopathy"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Encephalopathy
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Nycturia"
-                        id="Nycturia"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="Nycturia"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Nycturia
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Lowerlimbsedema"
-                        id="Lowerlimbsedema"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="Lowerlimbsedema"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Lower limbs edema
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Epworth"
-                        id="Epworth"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-
-                      <label
-                        htmlFor="Epworth"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Epworth Score
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FunctionalState"
-                        id="FunctionalState"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-
-                      <label
-                        htmlFor="FunctionalState"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Functional state
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="mMRC"
-                        id="mMRC"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="mMRC0">mMRC 0</option>
-                        <option value="mMRC1">mMRC 1</option>
-                        <option value="mMRC2">mMRC 2</option>
-                        <option value="mMRC3">mMRC 3</option>
-                        <option value="mMRC4">mMRC 4</option>
-                      </select>
-                      <label
-                        htmlFor="mMRC"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        mMRC
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <BasicMonitoringClinical
+            isOpen={isOpen1}
+            toggleAccordion={toggleAccordion1}
+            formValues={formValues}
+            setFormValues={setFormValues}
+            handleChange={handleChange}
+          />
           {/*Section 3*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion2}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Tolerance
-              </h4>
-              <div
-                className={` ${
-                  isOpen2 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen2 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen2 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="qualityOfLife"
-                        id="qualityOfLife"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="qualityOfLife"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Quality of life
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Satisfaction"
-                        id="Satisfaction"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Satisfaction"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Satisfaction
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="StGeorges"
-                        id="StGeorges"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="StGeorges"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        St Georges
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FamilyExperience"
-                        id="FamilyExperience"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="FamilyExperience"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Family Experience
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Needs"
-                        id="Needs"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Needs"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Needs
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <h3 className="mb-2 text-sm text-gray-500">
-                        NIV side effects
-                      </h3>
-                      <ul
-                        className="  w-48 text-sm font-medium text-gray-900rounded-lg text-black"
-                        id="NIVSideEffects"
-                      >
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="UnintentionalLeaks-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="UnintentionalLeaks-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              Unintentional Leaks
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="ConjunctivalIrritation-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="ConjunctivalIrritation-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              Conjunctival Irritation
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Pain-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Pain-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Pain
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="SkinLesions-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="SkinLesions-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Skin Lesions
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="NasalObstruction-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="NasalObstruction-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Nasal Obstruction
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="MucosalDryness-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="MucosalDryness-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Mucosal Dryness
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Rhinorrhea-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Rhinorrhea-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Rhinorrhea
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="InappropriateAlarmSettings-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="InappropriateAlarmSettings-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Inappropriate Alarm Settings
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="AbdominalDistention-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="AbdominalDistention-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Abdominal Distention
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="DisruptedSleep-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="DisruptedSleep-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Disrupted Sleep
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Claustrophobia-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Claustrophobia-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Claustrophobia
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Anxiety-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Anxiety-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Anxiety
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Relatedtointerface-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Relatedtointerface-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Related to interface
-                            </label>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          {/*         <QualityOfLife
+            isOpen={isOpen11}
+            toggleAccordion={toggleAccordion11}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          /> */}
+          {/*Section 3*/}
+          <Tolerance
+            isOpen={isOpen2}
+            toggleAccordion={toggleAccordion2}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*Section 4*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion3}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Biomarkers
-              </h4>
-              <div
-                className={` ${
-                  isOpen3 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen3 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen3 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="dayTimeABGs"
-                        id="dayTimeABGs"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="dayTimeABGs"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Day-Time ABGs
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="pH"
-                        id="pH"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="pH"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        pH
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="pCO2"
-                        id="pCO2"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="pCO2"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        pCO2
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="PO2"
-                        id="PO2"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="PO2"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        PO2
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Hco3"
-                        id="Hco3"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Hco3"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Hco3
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SaO2"
-                        id="SaO2"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SaO2"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        SaO2
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="PFT"
-                        id="PFT"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="PFT"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        PFT
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FEV1"
-                        id="FEV1"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="FEV1"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        FEV1
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FVC"
-                        id="FVC"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="FVC"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        FVC
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FEV1/FVCRatio"
-                        id="FEV1/FVCRatio"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="FEV1/FVCRatio"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        FEV1/FVC Ratio
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 3*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="TLC"
-                        id="TLC"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="TLC"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        TLC
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="DLCO"
-                        id="DLCO"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="DLCO"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        DLCO
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SixMWT"
-                        id="SixMWT"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SixMWT"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        6MWT
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="EPAP"
-                        id="EPAP"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="EPAP"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        EPAP
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="IPAP"
-                        id="IPAP"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="IPAP"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        IPAP
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 4*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="TImax"
-                        id="TImax"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="TImax"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        TImax
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="TImin"
-                        id="TImin"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="TImin"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        TImin
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FixedTI"
-                        id="FixedTI"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="FixedTI"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Fixed TI
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SensitivityOfInspiratoryCycling"
-                        id="SensitivityOfInspiratoryCycling"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SensitivityOfInspiratoryCycling"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Sensitivity Of Inspiratory Cycling
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SensitivityOfExpiratoryCycling"
-                        id="SensitivityOfExpiratoryCycling"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SensitivityOfExpiratoryCycling"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Sensitivity Of Expiratory Cycling
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 5*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="InspiratoryRiseTime"
-                        id="InspiratoryRiseTime"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="InspiratoryRiseTime"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Inspiratory Rise Time
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="RespiratoryBackupTime"
-                        id="RespiratoryBackupTime"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="RespiratoryBackupTime"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Respiratory Backup Time
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="RespiratoryFrequency"
-                        id="RespiratoryFrequency"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="RespiratoryFrequency"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Respiratory frequency
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="FallTime"
-                        id="FallTime"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="FallTime"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Fall Time
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="TargetedVt"
-                        id="TargetedVt"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="TargetedVt"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Targeted Vt
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 6*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="maximalPS"
-                        id="maximalPS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="maximalPS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Maximal PS
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="MinimalPS"
-                        id="MinimalPS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="MinimalPS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Minimal PS
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="DailyUse"
-                        id="DailyUse"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="DailyUse"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Daily Use
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Leaks"
-                        id="Leaks"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Leaks"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Leaks
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="AHI"
-                        id="AHI"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="AHI"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        AHI
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 7*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Severity"
-                        id="Severity"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Severity"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Severity (mild moderate severe)
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Conclusion"
-                        id="Conclusion"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="Obstructive">Obstructive</option>
-                        <option value="Restrictive">Restrictive</option>
-                        <option value="Mixed">Mixed</option>
-                        <option value="Normal">Normal</option>
-                      </select>
-                      <label
-                        htmlFor="Conclusion"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Conclusion
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="GOLD"
-                        id="GOLD"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                      </select>
-                      <label
-                        htmlFor="GOLD"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        GOLD
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Mode"
-                        id="Mode"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="CPAP">CPAP</option>
-                        <option value="PVSS">PVS-S</option>
-                        <option value="PVSST">PVS- ST</option>
-                        <option value="PVST">PVS-T</option>
-                        <option value="aPCV">(a)PCV</option>
-                        <option value="iVAPS">iVAPS</option>
-                        <option value="AVAPS">AVAPS</option>
-                        <option value="VAC">VAC</option>
-                      </select>
-                      <label
-                        htmlFor="Mode"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Mode
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Regularity"
-                        id="Regularity"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                      <label
-                        htmlFor="Regularity"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Regularity
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 8*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Interruptions"
-                        id="Interruptions"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                      <label
-                        htmlFor="Interruptions"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Interruptions
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <Biomarkers
+            isOpen={isOpen3}
+            toggleAccordion={toggleAccordion3}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*Section 5*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion4}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Advanced Monitoring
-              </h4>
-              <div
-                className={` ${
-                  isOpen4 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen4 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen4 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="DetailedData"
-                        id="DetailedData"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="DetailedData"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Detailed Data
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="PressureFlow"
-                        id="PressureFlow"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="PressureFlow"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Pressure/Flow
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="OtherCurves"
-                        id="OtherCurves"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="OtherCurves"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Other Curves
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="AHI"
-                        id="AHI"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="AHI"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        AHI
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="OSAS"
-                        id="OSAS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="OSAS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        OSAS
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="CSAS"
-                        id="CSAS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="CSAS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        CSAS
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="CS"
-                        id="CS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="CS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        CS
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="HV"
-                        id="HV"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="HV"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        HV
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="AHIH"
-                        id="AHIH"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="AHIH"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        AHI/H
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="ODIH"
-                        id="ODIH"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="ODIH"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        ODI/H
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 3*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="meanSpO2"
-                        id="meanSpO2"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="meanSpO2"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        meanSpO2
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SpO2"
-                        id="SpO2"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SpO2"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        SpO2
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="OSAS"
-                        id="OSAS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="OSAS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        OSAS
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="OHS"
-                        id="OHS"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="OHS"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        OHS
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="PVAs"
-                        id="PVAs"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                      <label
-                        htmlFor="PVAs"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        PVAs
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 4*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="PVAsTypes"
-                        id="PVAsTypes"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="EarlyTriggering">
-                          Early triggering
-                        </option>
-                        <option value="EarlyCycling">Early cycling</option>
-                        <option value="AutoTriggering">Auto-Triggering</option>
-                        <option value="FlowStarvation">Flow Starvation</option>
-                        <option value="IneffectiveEffort">
-                          Ineffective Effort
-                        </option>
-                      </select>
-                      <label
-                        htmlFor="PVAsTypes"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        PVAs Types
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="RespiratoryPolygraphy"
-                        id="RespiratoryPolygraphy"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          Choose an option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                      <label
-                        htmlFor="RespiratoryPolygraphy"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Respiratory polygraphy
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="file"
-                        name="RespiratoryPolygraphyFile"
-                        id="RespiratoryPolygraphyFile"
-                        className="block py-2 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        accept=".pdf,image/*"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="RespiratoryPolygraphyFile"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Respiratory Polygraphy File
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <VentilatorySupport
+            isOpen={isOpen13}
+            toggleAccordion={toggleAccordion13}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
+          {/*Section 5*/}
+          <AdvancedMonitoring
+            isOpen={isOpen4}
+            toggleAccordion={toggleAccordion4}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*Section 6*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion5}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Medications adherence
-              </h4>
-              <div
-                className={` ${
-                  isOpen5 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen5 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen5 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Diuretics"
-                        id="Diuretics"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Diuretics"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Diuretics
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Rehabilitation"
-                        id="Rehabilitation"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Rehabilitation"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Rehabilitation
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Physiotherapy"
-                        id="Physiotherapy"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Physiotherapy"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Physiotherapy
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SmokeCessation"
-                        id="SmokeCessation"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SmokeCessation"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Smoke cessation
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="ReasonsOfNonAdherence"
-                        id="ReasonsOfNonAdherence"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose yes or no
-                        </option>
-                        <option value="Financial">Financial</option>
-                        <option value="educational">Educational</option>
-                        <option value="refusal">Refusal</option>
-                      </select>
-                      <label
-                        htmlFor="ReasonsOfNonAdherence"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Reasons of non-adherence
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="GOLD"
-                        id="GOLD"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose yes or no
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="GOLD"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        GOLD class discrepancy
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <h3 className="mb-2 text-sm text-gray-500">
-                        Medications adherence
-                      </h3>
-                      <ul
-                        className="  w-48 text-sm font-medium text-gray-900rounded-lg text-black"
-                        id="MedicationsAdhrence"
-                      >
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="laba-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="laba-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              LABA
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="lama-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="lama-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              LAMA
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="saba-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="saba-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              SABA
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="ics-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="ics-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              ICS
-                            </label>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <h3 className="mb-2 text-sm text-gray-500">
-                        Vaccinations
-                      </h3>
-                      <ul
-                        className="  w-48 text-sm font-medium text-gray-900rounded-lg text-black"
-                        id="Vaccinations"
-                      >
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="SARSCoV2-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="SARSCoV2-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              SARS-CoV-2
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Spneumoniae-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Spneumoniae-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              S. pneumoniae
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Influenza-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Influenza-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Influenza
-                            </label>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <textarea
-                        type="text"
-                        name="Sum-up"
-                        id="Sumup"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Sumup"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Sum-up
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <MedicationsAdherence
+            isOpen={isOpen5}
+            toggleAccordion={toggleAccordion5}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*Section 7*/}
-          <div className="p-3 mt-10  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion6}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Management adjustment
-              </h4>
-              <div
-                className={` ${
-                  isOpen6 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border boerder-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen6 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen6 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="PrescriptionForm"
-                        id="PrescriptionForm"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="PrescriptionForm"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Prescription Form
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="BrandName"
-                        id="BrandName"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="BrandName"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Brand Name
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="CIDdosages"
-                        id="CIDdosages"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="CIDdosages"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        (CID) dosages
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Duration"
-                        id="Duration"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Duration"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Duration
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Others"
-                        id="Others"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Others"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Others
-                      </label>
-                    </div>
-                  </div>
-                  {/*Input 2*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="Doctor"
-                        id="Doctor"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Doctor"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Doctor
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="date"
-                        name="Date"
-                        id="Date"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="Date"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Date
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="file"
-                        name="StampPdfToPatient"
-                        id="StampPdfToPatient"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        accept=".pdf,image/*"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="StampPdfToPatient"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Stamp pdf to patient
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <ManagementAdjustment
+            isOpen={isOpen6}
+            consultation={consultation}
+            toggleAccordion={toggleAccordion6}
+            handleAdditionalInputChange={handleAdditionalInputChange}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*Section 8*/}
-          <div className="p-3 mt-5  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion7}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Ventilatory
-              </h4>
-              <div
-                className={` ${
-                  isOpen7 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border border-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen7 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen7 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="NIVwithdrawal"
-                        id="NIVwithdrawal"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="NIVwithdrawal"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        NIV withdrawal
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="NIVSuspensionTest"
-                        id="NIVSuspensionTest"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="NIVSuspensionTest"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        NIV Suspension test
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="SettingsModification"
-                        id="SettingsModification"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="SettingsModification"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Settings modification
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="InterfaceChange"
-                        id="InterfaceChange"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="InterfaceChange"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Interface change
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="PSSwitch"
-                        id="PSSwitch"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose option
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="PSSwitch"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        PS Switch
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <Ventilatory
+            isOpen={isOpen7}
+            toggleAccordion={toggleAccordion7}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*Section 9*/}
-          <div className="p-3 mt-5  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion8}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Pharmacological
-              </h4>
-              <div
-                className={` ${
-                  isOpen8 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border border-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen8 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen8 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="PrescriptionAdjustment"
-                        id="PrescriptionAdjustment"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose yes or no
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="PrescriptionAdjustment"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Prescription Adjustment
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <h3 className="mb-2 text-sm text-gray-500">
-                        De novo prescription
-                      </h3>
-                      <ul
-                        className="  w-48 text-sm font-medium text-gray-900rounded-lg text-black"
-                        id="DeNovoPrescription"
-                      >
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="laba-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="laba-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              LABA
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="lama-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="lama-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              LAMA
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="ics-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="ics-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              ICS
-                            </label>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <h3 className="mb-2 text-sm text-gray-500">
-                        Vaccination prescription
-                      </h3>
-                      <ul
-                        className="  w-48 text-sm font-medium text-gray-900rounded-lg text-black"
-                        id="VaccinationPrescription"
-                      >
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="influenza-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="influenza-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              Influenza
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="SARSCoV2-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="SARSCoV2-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              SARS-CoV-2
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="pneumococcus-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="pneumococcus-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              pneumococcus
-                            </label>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <Pharmacological
+            isOpen={isOpen8}
+            toggleAccordion={toggleAccordion8}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
           {/*section 10*/}
-          <div className="p-3 mt-5  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion9}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Physiologic
-              </h4>
-              <div
-                className={` ${
-                  isOpen9 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border border-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen9 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen9 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="QuittingSmokingProgram"
-                        id="QuittingSmokingProgram"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose yes or no
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="QuittingSmokingProgram"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Quitting Smoking Program
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="RehabilitationProgram"
-                        id="RehabilitationProgram"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose yes or no
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="RehabilitationProgram"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Rehabilitation program
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <select
-                        type="text"
-                        name="Physiotherapy"
-                        id="Physiotherapy"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      >
-                        <option value="" disabled selected hidden>
-                          choose yes or no
-                        </option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                      <label
-                        htmlFor="Physiotherapy"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Physiotherapy
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          {/*Section 11*/}
-          <div className="p-3 mt-5  rounded-[12px] border border-solid border-[#D9DCE2] mb-5 cursor-pointer">
-            <div
-              className="flex items-center justify-between gap-5 "
-              onClick={toggleAccordion10}
-            >
-              <h4 className="text-[16px] leading-7 lg:text-[22px] lg:leading-8 text-headingColor">
-                Next appointment
-              </h4>
-              <div
-                className={` ${
-                  isOpen10 && "bg-primaryColor text-white border-none"
-                } w-7 h-7 lg:w-8 lg:h-8 border border-solid border-[#141F21] rounded flex items-center justify-center`}
-              >
-                {isOpen10 ? <AiOutlineMinus /> : <AiOutlinePlus />}
-              </div>
-            </div>
-            {isOpen10 && (
-              <div className="mt-4">
-                <div className="text-[14px] leading-6 lg:text-[16px] lg:leading-7 font-[400] text-textColor ">
-                  {/*Input 1*/}
+          <Physiologic
+            isOpen={isOpen9}
+            toggleAccordion={toggleAccordion9}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
+          {/*section 11*/}
+          <SumUp
+            isOpen={isOpen12}
+            toggleAccordion={toggleAccordion12}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
+          {/*Section 12*/}
+          <NextAppointment
+            isOpen={isOpen10}
+            toggleAccordion={toggleAccordion10}
+            setFormValues={setFormValues}
+            formValues={formValues}
+            handleChange={handleChange}
+          />
 
-                  <div className="grid md:grid-cols-5 md:gap-6">
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="tte"
-                        id="tte"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="tte"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        TTE
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="PFT"
-                        id="PFT"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="PFT"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        PFT
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="others"
-                        id="others"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="others"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Others
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <input
-                        type="text"
-                        name="InsuranceRequest"
-                        id="InsuranceRequest"
-                        className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-                        placeholder=" "
-                      />
-                      <label
-                        htmlFor="InsuranceRequest"
-                        className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transhtmlForm -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                      >
-                        Insurance request
-                      </label>
-                    </div>
-                    <div className="relative z-0 w-full mb-5 group">
-                      <h3 className="mb-2 text-sm text-gray-500">Biomarkers</h3>
-                      <ul
-                        className="  w-48 text-sm font-medium text-gray-900rounded-lg text-black"
-                        id="Biomarkers"
-                      >
-                        <li className=" border-gray-200 rounded-t-lg ">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="ABGs-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="ABGs-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              ABGs
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Polygraphy-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Polygraphy-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black "
-                            >
-                              Polygraphy
-                            </label>
-                          </div>
-                        </li>
-                        <li className=" border-gray-200 rounded-t-lg">
-                          <div className="flex items-center ps-3">
-                            <input
-                              id="Downlowds-checkbox"
-                              type="checkbox"
-                              value=""
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                            />
-                            <label
-                              htmlFor="Downlowds-checkbox"
-                              className="w-full py-3 ms-2 text-sm font-medium text-black"
-                            >
-                              Downlowds
-                            </label>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
           <div className="flex justify-end">
             <button
-              onClick={async () => {
-                await handleSubmit();
+              onClick={(e) => {
+                e.preventDefault();
+                generatePDF();
               }}
+              type="button"
+              className="text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 m-5"
+            >
+              Prescription
+            </button>
+            <button
               type="submit"
               className="text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 m-5"
             >
